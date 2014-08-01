@@ -31,6 +31,7 @@ module OmniAuth
       option :scope, 'r_basicprofile r_emailaddress'
 
       attr_accessor :access_token
+      alias :oauth2_access_token :access_token
 
       uid { raw_info['id'] }
 
@@ -71,7 +72,7 @@ module OmniAuth
       def raw_info
         fields = options.fields
         fields.map! {|f| f == 'picture-url' ? 'picture-url;secure=true' : f } if options[:secure_image_url]
-        @raw_info ||= MultiJson.decode(access_token.get("v1/people/~:(#{fields.join(',')})?format=json").body)
+        @raw_info ||= access_token.get("v1/people/~:(#{fields.join(',')})?format=json").parsed
       end
 
       def info_options
@@ -151,9 +152,16 @@ module OmniAuth
         # Options supported by `::OAuth2::AccessToken#initialize` and not overridden by `access_token_options`
         hash = request.params.slice("access_token", "expires_at", "expires_in", "refresh_token")
         hash.update(options.access_token_options)
-        ::OAuth2::AccessToken.from_hash(
+        ::OAuth2::AccessToken.new(
           client,
-          hash
+          hash["access_token"],
+          {
+            :mode => :query,
+            :param_name => 'oauth2_access_token',
+            :expires_in => hash["expires_in"],
+            :expires_at => hash["expires_at"],
+            :refresh_token => hash["refresh_token"]
+          }
         )
       end
 
