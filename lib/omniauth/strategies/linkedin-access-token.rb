@@ -3,7 +3,7 @@ require 'omniauth'
 
 module OmniAuth
   module Strategies
-    class LinkedInAccessToken
+    class LinkedinAccessToken
       include OmniAuth::Strategy
 
       option :name, 'linkedin_access_token'
