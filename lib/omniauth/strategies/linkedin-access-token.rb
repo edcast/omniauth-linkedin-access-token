@@ -163,6 +163,6 @@ module OmniAuth
           value.nil? || (value.respond_to?(:empty?) && value.empty?)
         end
       end
+    end
   end
 end
-
