@@ -20,8 +20,8 @@ module OmniAuth
       }
 
       option :access_token_options, {
-        :header_format => 'OAuth %s',
-        :param_name => 'access_token'
+        :mode => :query,
+        :param_name => 'oauth2_access_token'
       }
 
       option :fields, ["id", "email-address", "first-name", "last-name", 
