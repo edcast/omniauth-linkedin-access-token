@@ -15,8 +15,7 @@ module OmniAuth
 
       option :client_options, {
         :site => 'https://api.linkedin.com',
-        :token_url => '/oauth/access_token',
-        :ssl => { :version => "SSLv3" }
+        :token_url => '/oauth/access_token'
       }
 
       option :access_token_options, {
