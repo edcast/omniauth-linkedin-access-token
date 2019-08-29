@@ -71,7 +71,7 @@ module OmniAuth
       def raw_info
         fields = options.fields
         fields.map! {|f| f == 'picture-url' ? 'picture-url;secure=true' : f } if options[:secure_image_url]
-        @raw_info ||= access_token.get("v1/people/~:(#{fields.join(',')})?format=json").parsed
+        @raw_info ||= access_token.get("v2/people/~:(#{fields.join(',')})?format=json").parsed
       end
 
       def info_options
