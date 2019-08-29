@@ -35,21 +35,16 @@ module OmniAuth
       uid { raw_info['id'] }
 
       info do
-        name = [raw_info['firstName'], raw_info['lastName']].compact.join(' ').strip || nil
+        name = [raw_info['localizedFirstName'], raw_info['localizedLastName']].compact.join(' ').strip || nil
         name = nil_if_empty(name)
         prune!({
           :name => name,
           :email => raw_info['emailAddress'],
           :nickname => name,
-          :first_name => raw_info['firstName'],
-          :last_name => raw_info['lastName'],
-          :location => parse_location(raw_info['location']),
-          :description => raw_info['headline'],
-          :image => raw_info['pictureUrl'],
-          :headline => raw_info['headline'],
-          :industry => raw_info['industry'],
+          :first_name => raw_info['localizedFirstName'],
+          :last_name => raw_info['localizedLastName'],
           :urls => {
-            :public_profile => raw_info['publicProfileUrl']
+            :public_profile => raw_info.dig('profilePicture', 'displayImage~', 'elements'].try(:first).dig('identifiers').try(:first).dig('identifier')
           },
         })
       end
@@ -69,9 +64,7 @@ module OmniAuth
       end
 
       def raw_info
-        fields = options.fields
-        fields.map! {|f| f == 'picture-url' ? 'picture-url;secure=true' : f } if options[:secure_image_url]
-        @raw_info ||= access_token.get("v2/people/~:(#{fields.join(',')})?format=json").parsed
+        @raw_info ||= access_token.get("v2/me").parsed
       end
 
       def info_options
