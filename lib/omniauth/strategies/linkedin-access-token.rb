@@ -27,7 +27,7 @@ module OmniAuth
                        "headline", "industry", "picture-url", "location",
                        "public-profile-url"]
 
-      option :scope, 'r_basicprofile r_emailaddress'
+      option :scope, 'r_liteprofile r_emailaddress'
 
       attr_accessor :access_token
       alias :oauth2_access_token :access_token
