@@ -15,7 +15,8 @@ module OmniAuth
 
       option :client_options, {
         :site => 'https://api.linkedin.com',
-        :token_url => '/oauth/access_token'
+        :authorize_url => 'https://www.linkedin.com/oauth/v2/authorization?response_type=code',
+        :token_url => 'https://www.linkedin.com/oauth/v2/accessToken'
       }
 
       option :access_token_options, {
@@ -23,9 +24,8 @@ module OmniAuth
         :param_name => 'oauth2_access_token'
       }
 
-      option :fields, ["id", "email-address", "first-name", "last-name", 
-                       "headline", "industry", "picture-url", "location",
-                       "public-profile-url"]
+      option :fields, ["id", "email-address", "first-name", "last-name",
+                       "picture-url"]
 
       option :scope, 'r_liteprofile r_emailaddress'
 
@@ -35,18 +35,17 @@ module OmniAuth
       uid { raw_info['id'] }
 
       info do
-        name = [raw_info['localizedFirstName'], raw_info['localizedLastName']].compact.join(' ').strip || nil
-        name = nil_if_empty(name)
-        prune!({
-          :name => name,
-          :email => raw_info['emailAddress'],
-          :nickname => name,
-          :first_name => raw_info['localizedFirstName'],
-          :last_name => raw_info['localizedLastName'],
+        full_name = [localized_field('firstName'), localized_field('lastName')].compact.join(' ').strip || nil
+        full_name = nil_if_empty(full_name)
+        {
+          :name => full_name,
+          :email => email_address,
+          :first_name => localized_field('firstName'),
+          :last_name => localized_field('lastName'),
           :urls => {
-            :public_profile => raw_info.dig('profilePicture', 'displayImage~', 'elements'].try(:first).dig('identifiers').try(:first).dig('identifier')
-          },
-        })
+            :public_profile => picture_url
+          }
+        }
       end
 
       extra do
@@ -64,7 +63,7 @@ module OmniAuth
       end
 
       def raw_info
-        @raw_info ||= access_token.get("v2/me").parsed
+        @raw_info ||= access_token.get(profile_endpoint).parsed
       end
 
       def info_options
@@ -162,6 +161,84 @@ module OmniAuth
           prune!(value) if value.is_a?(Hash)
           value.nil? || (value.respond_to?(:empty?) && value.empty?)
         end
+      end
+
+      def email_address
+        if options.fields.include? 'email-address'
+          fetch_email_address
+          parse_email_address
+        end
+      end
+
+      def fetch_email_address
+        @email_address_response ||= access_token.get(email_address_endpoint).parsed
+      end
+
+      def parse_email_address
+        return unless email_address_available?
+
+        @email_address_response['elements'].first['handle~']['emailAddress']
+      end
+
+      def email_address_available?
+        @email_address_response['elements'] &&
+          @email_address_response['elements'].is_a?(Array) &&
+          @email_address_response['elements'].first &&
+          @email_address_response['elements'].first['handle~']
+      end
+
+      def fields_mapping
+        {
+          'id' => 'id',
+          'first-name' => 'firstName',
+          'last-name' => 'lastName',
+          'picture-url' => 'profilePicture(displayImage~:playableStreams)'
+        }
+      end
+
+      def fields
+        options.fields.each.with_object([]) do |field, result|
+          result << fields_mapping[field] if fields_mapping.has_key? field
+        end
+      end
+
+      def localized_field field_name
+        return unless localized_field_available? field_name
+
+        raw_info[field_name]['localized'][field_locale(field_name)]
+      end
+
+      def field_locale field_name
+        "#{ raw_info[field_name]['preferredLocale']['language'] }_" \
+          "#{ raw_info[field_name]['preferredLocale']['country'] }"
+      end
+
+      def localized_field_available? field_name
+        raw_info[field_name] && raw_info[field_name]['localized']
+      end
+
+      def picture_url
+        return unless picture_available?
+
+        picture_references.last['identifiers'].first['identifier']
+      end
+
+      def picture_available?
+        raw_info['profilePicture'] &&
+          raw_info['profilePicture']['displayImage~'] &&
+          picture_references
+      end
+
+      def picture_references
+        raw_info['profilePicture']['displayImage~']['elements']
+      end
+
+      def email_address_endpoint
+        '/v2/emailAddress?q=members&projection=(elements*(handle~))'
+      end
+
+      def profile_endpoint
+        "/v2/me?projection=(#{ fields.join(',') })"
       end
     end
   end
