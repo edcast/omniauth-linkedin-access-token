@@ -240,6 +240,9 @@ module OmniAuth
       def profile_endpoint
         "/v2/me?projection=(#{ fields.join(',') })"
       end
+
+      def sample
+      end
     end
   end
 end
